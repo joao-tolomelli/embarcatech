@@ -57,7 +57,7 @@ function HumidityCard({ currentHumidity, HumidityData }) {
 
       {/* Valor Principal */}
       <div className="flex flex-col">
-        <span className="text-4xl font-bold text-gray-800 my-2">
+        <span className="text-4xl font-bold text-gray-800 my-2 text-center">
           {currentHumidity} %
         </span>
       </div>
