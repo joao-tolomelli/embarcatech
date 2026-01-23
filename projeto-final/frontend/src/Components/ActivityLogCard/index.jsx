@@ -4,10 +4,10 @@ function ActivityLogCard({ logs = [] }) {
   return (
     // CONTAINER EXTERNO: Define o tamanho do "Card"
     // relative: Permite posicionar coisas lá dentro absolutamente
-    <div className="h-full flex flex-col bg-gray-50 rounded-xl shadow-sm border border-gray-200 relative overflow-hidden">
+    <div className="h-full flex flex-col bg-white rounded-xl shadow-sm border border-gray-200 relative overflow-hidden">
       
       {/* CABEÇALHO (Fixo no topo) */}
-      <div className="flex-none p-4 border-b border-gray-200 flex align-items-center gap-2 bg-gray-50 z-10">
+      <div className="flex-none p-4 border-b border-gray-200 flex align-items-center gap-2 bg-white z-10">
         <i className="pi pi-history text-gray-500 text-lg"></i>
         <span className="font-semibold text-gray-700 text-md uppercase tracking-wide flex items-center ">
           Registro de Atividades

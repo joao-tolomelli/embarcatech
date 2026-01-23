@@ -6,6 +6,7 @@ import HumidityCard from "./Components/HumidityCard";
 import CollisionCard from "./Components/CollisionCard";
 import BoxStatusCard from "./Components/BoxStatusCard";
 import ActivityLogCard from "./Components/ActivityLogCard";
+import HistoryChart from "./Components/HistoryChart";
 
 function App() {
   const simulatedTemperatureData = [22.0, 23.5, 23.0, 24.1, 23.8, 24.2, 24.5];
@@ -96,9 +97,10 @@ function App() {
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1">
           {/* Coluna Esquerda: Gráfico Principal (Ocupa 2/3) */}
           <div className="lg:col-span-2 h-full">
-            <div className="bg-white p-6 rounded-xl shadow-sm h-full flex items-center justify-center text-gray-400 border border-gray-200">
-              [Área reservada para o Gráfico Histórico Completo]
-            </div>
+            <HistoryChart
+              temperatureData={simulatedTemperatureData}
+              humidityData={simulatedHumidityData}
+            />
           </div>
 
           {/* Coluna Direita: Logs (Ocupa 1/3) */}

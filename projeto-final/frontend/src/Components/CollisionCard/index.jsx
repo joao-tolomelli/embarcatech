@@ -16,7 +16,7 @@ function CollisionCard({ hasCollision, lastGForce = "0.0" }) {
   };
 
   return (
-    <Card className="flex-1 shadow-sm border-round-xl bg-gray-50">
+    <Card className="flex-1 shadow-sm border-round-xl bg-white">
       
       {/* Cabeçalho do Card */}
       <div className="flex align-items-center gap-3 mb-2">
