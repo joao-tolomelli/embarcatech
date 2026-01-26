@@ -1,0 +1,19 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Leitura {
+  id          Int      @id @default(autoincrement())
+  temperatura Float
+  umidade     Float
+  caixaAberta Boolean  @map("caixa_aberta")
+  colisao     Boolean
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("leituras")
+}
