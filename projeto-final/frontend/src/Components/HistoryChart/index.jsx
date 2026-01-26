@@ -11,9 +11,8 @@ function HistoryChart({ temperatureData = [], humidityData = [] }) {
     const textColorSecondary = documentStyle.getPropertyValue("--text-color-secondary") || "#9ca3af";
     const surfaceBorder = documentStyle.getPropertyValue("--surface-border") || "#e5e7eb";
 
-    // Cores oficiais do seu tema
-    const tempColor = "#EF4444"; // Red-500
-    const humColor = "#3B82F6";  // Blue-500
+    const tempColor = "#EF4444";
+    const humColor = "#3B82F6";
 
     // Gera labels fictícias de horário baseadas na quantidade de dados
     // (No futuro, você passará um array de horários reais aqui)
@@ -96,7 +95,7 @@ function HistoryChart({ temperatureData = [], humidityData = [] }) {
           position: "left",
           ticks: {
             color: tempColor, // Cor do texto igual à linha
-            callback: (value) => `${value}°C`
+            callback: (value) => `${value.toFixed(1)}°C`
           },
           grid: {
             color: surfaceBorder,
@@ -113,7 +112,7 @@ function HistoryChart({ temperatureData = [], humidityData = [] }) {
           position: "right",
           ticks: {
             color: humColor, // Cor do texto igual à linha
-            callback: (value) => `${value}%`
+            callback: (value) => `${value.toFixed(1)}%`
           },
           grid: {
             drawOnChartArea: false, // Remove a grade para não poluir o visual

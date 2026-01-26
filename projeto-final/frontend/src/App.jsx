@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Card } from "primereact/card";
 import "primeicons/primeicons.css";
 import TemperatureCard from "./Components/TemperatureCard";
@@ -7,67 +7,59 @@ import CollisionCard from "./Components/CollisionCard";
 import BoxStatusCard from "./Components/BoxStatusCard";
 import ActivityLogCard from "./Components/ActivityLogCard";
 import HistoryChart from "./Components/HistoryChart";
+import { getHistorico, getLeituraAtual, getLogs } from "./services/api";
 
 function App() {
-  const simulatedTemperatureData = [22.0, 23.5, 23.0, 24.1, 23.8, 24.2, 24.5];
-  const currentTemperature = 24.5;
+  const [currentData, setCurrentData] = useState({
+    temperatura: 0,
+    umidade: 0,
+    colisao: false,
+    caixaAberta: false,
+    lux: 0,
+  });
 
-  const simulatedHumidityData = [50.0, 51.5, 52.0, 53.1, 52.8, 53.2, 53.5];
-  const currentHumidity = 53.5;
+  const [historyTemp, setHistoryTemp] = useState([]);
+  const [historyHum, setHistoryHum] = useState([]);
+  const [logs, setLogs] = useState([]);
 
-  const simulatedCollisionData = true;
-  const lastGForce = "2.8";
+  const fetchData = async () => {
+    // Busca Leitura Atual
+    const leitura = await getLeituraAtual();
+    if (leitura) {
+      setCurrentData({
+        temperatura: leitura.temperatura,
+        umidade: leitura.umidade,
+        colisao: leitura.colisao,
+        caixaAberta: leitura.caixaAberta, 
+        lux: 0, 
+      });
+    }
 
-  const logs = [
-    {
-      id: 1,
-      time: "10:22:25",
-      message: "Verificação de Status: OK",
-      type: "info",
-    },
-    {
-      id: 2,
-      time: "10:21:30",
-      message: "Verificação de Status: OK",
-      type: "info",
-    },
-    {
-      id: 3,
-      time: "10:15:00",
-      message: "**ALERTA**: Impacto Detectado (2.8G)",
-      type: "alert",
-    },
-    {
-      id: 4,
-      time: "10:14:55",
-      message: "Verificação de Status: OK",
-      type: "info",
-    },
-    {
-      id: 5,
-      time: "10:00:00",
-      message: "Sistema Iniciado - Conectado ao WiFi",
-      type: "success",
-    },
-    {
-      id: 6,
-      time: "09:55:00",
-      message: "Aguardando conexão...",
-      type: "warning",
-    },
-    {
-      id: 7,
-      time: "09:55:00",
-      message: "Aguardando conexão...",
-      type: "warning",
-    },
-    {
-      id: 8,
-      time: "09:55:00",
-      message: "Aguardando conexão...",
-      type: "warning",
-    },
-  ];
+    // Busca Histórico e processa para o Gráfico
+    const historico = await getHistorico();
+    if (historico.length > 0) {
+      const temps = historico.map((item) => item.temperatura);
+      const hums = historico.map((item) => item.umidade);
+      setHistoryTemp(temps);
+      setHistoryHum(hums);
+    }
+
+    // Busca Logs
+    const logData = await getLogs();
+    if (logData) {
+      setLogs(logData);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+
+    const intervalId = setInterval(() => {
+      fetchData();
+    }, 10000);
+
+    return () => clearInterval(intervalId);
+  }, []);
 
   return (
     <main className="w-screen h-screen">
@@ -79,31 +71,31 @@ function App() {
         {/* Cards Superiores */}
         <section className="flex flex-row gap-4 shrink-0">
           <TemperatureCard
-            currentTemperature={currentTemperature}
-            temperatureData={simulatedTemperatureData}
+            currentTemperature={currentData.temperatura}
+            temperatureData={historyTemp}
           />
           <HumidityCard
-            currentHumidity={currentHumidity}
-            HumidityData={simulatedHumidityData}
+            currentHumidity={currentData.umidade}
+            HumidityData={historyHum}
           />
-          <CollisionCard
-            hasCollision={simulatedCollisionData}
-            lastGForce={lastGForce}
+          <CollisionCard hasCollision={currentData.colisao} lastGForce="--" />
+          <BoxStatusCard
+            isOpen={currentData.caixaAberta}
+            luxValue={currentData.lux}
           />
-          <BoxStatusCard isOpen={false} luxValue={"2.1"} />
         </section>
 
         {/* Conteúdo Principal (Gráfico e Logs) */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1">
-          {/* Coluna Esquerda: Gráfico Principal (Ocupa 2/3) */}
+          {/* Coluna Esquerda: Gráfico Principal */}
           <div className="lg:col-span-2 h-full">
             <HistoryChart
-              temperatureData={simulatedTemperatureData}
-              humidityData={simulatedHumidityData}
+              temperatureData={historyTemp}
+              humidityData={historyHum}
             />
           </div>
 
-          {/* Coluna Direita: Logs (Ocupa 1/3) */}
+          {/* Coluna Direita: Logs */}
           <div className="lg:col-span-1 h-full">
             <ActivityLogCard logs={logs} />
           </div>
