@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # 1. Banco de Dados
+  db:
+    image: postgres:15-alpine
+    container_name: iot_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: monitoramento_iot
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432" # Expõe para você conseguir acessar via DBeaver/PgAdmin se quiser
+
+  # 2. Broker MQTT
+  mqtt:
+    image: eclipse-mosquitto
+    container_name: iot_mosquitto
+    restart: always
+    ports:
+      - "1883:1883" # Importante expor para o PICO W conseguir conectar
+      - "9001:9001"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+
+  # 3. Backend Node.js
+  backend:
+    build: ./backend
+    container_name: iot_backend
+    restart: always
+    depends_on:
+      - db
+      - mqtt
+    ports:
+      - "3001:3001"
+    environment:
+      # Note que usamos os nomes dos services (db, mqtt) como host
+      DATABASE_URL: "postgresql://postgres:password123@db:5432/monitoramento_iot?schema=public"
+      MQTT_HOST: "mqtt://mqtt:1883"
+      PORT: 3001
+
+  # 4. Frontend React (Nginx)
+  frontend:
+    build: ./frontend
+    container_name: iot_frontend
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "3000:80" # Acessaremos em localhost:3000
+
+volumes:
+  postgres_data:
+  mosquitto_data:
+  mosquitto_log:

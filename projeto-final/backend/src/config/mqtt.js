@@ -1,13 +1,14 @@
 const mqtt = require('mqtt');
 require('dotenv').config();
 
-const mqttOptions = {
-    host: process.env.MQTT_HOST || 'localhost',
-    port: 1883,
-    protocol: 'mqtt'
-};
 
-// Cria o cliente, mas a lógica de conexão fica no service
-const client = mqtt.connect(mqttOptions);
+const mqttUrl = process.env.MQTT_HOST || 'mqtt://localhost:1883';
+
+console.log(`🔌 Tentando conectar ao Broker em: ${mqttUrl}`);
+
+const client = mqtt.connect(mqttUrl, {
+    reconnectPeriod: 1000, 
+    connectTimeout: 30 * 1000,
+});
 
 module.exports = client;
