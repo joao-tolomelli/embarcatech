@@ -5,8 +5,8 @@
 #include "semphr.h"
 #include "wifi.h"
 
-#define WIFI_SSID      "Tolomelli TW"
-#define WIFI_PASSWORD  "JvGa@2728"
+#define WIFI_SSID      "SSID"
+#define WIFI_PASSWORD  "PASSWORD"
 
 static SemaphoreHandle_t xWiFiMutex;
 static bool wifi_connected = false;

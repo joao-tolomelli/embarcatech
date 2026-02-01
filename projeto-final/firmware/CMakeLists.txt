@@ -47,6 +47,7 @@ add_executable(main
         lib/bh1750/bh1750.c
         lib/MPU6050/MPU6050.cpp
         lib/mpu_wrapper/mpu_wrapper.cpp
+        lib/flash_storage/flash_storage.c
         )
 
 pico_set_program_name(main "main")
@@ -74,6 +75,7 @@ target_include_directories(main PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}/lib/bh1750
         ${CMAKE_CURRENT_LIST_DIR}/lib/MPU6050
         ${CMAKE_CURRENT_LIST_DIR}/lib/mpu_wrapper
+        ${CMAKE_CURRENT_LIST_DIR}/lib/flash_storage
 )
 
 # Add any user requested libraries
@@ -81,6 +83,9 @@ target_link_libraries(main
         pico_cyw43_arch_lwip_threadsafe_background
         pico_lwip_mqtt
         hardware_i2c
+        hardware_rtc
+        hardware_flash
+        hardware_sync
         )
 
 pico_add_extra_outputs(main)

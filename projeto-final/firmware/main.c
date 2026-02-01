@@ -6,6 +6,7 @@
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 #include "pico/cyw43_arch.h"
+#include "hardware/rtc.h" 
 
 // FreeRTOS
 #include "FreeRTOS.h"
@@ -19,6 +20,7 @@
 #include "aht10.h"
 #include "bh1750.h"
 #include "mpu_wrapper.h"
+#include "flash_storage.h"
 
 // Definição do limiar de luz para considerar a caixa aberta
 #define LIMIAR_LUX 10.0f
@@ -124,6 +126,9 @@ int main()
         while (1)
             sleep_ms(1000);
     }
+
+    // INICIALIZA O ARMAZENAMENTO NA FLASH
+    storage_init();
 
     // Cria os Mutex
     xSensorMutex = xSemaphoreCreateMutex();
@@ -283,40 +288,83 @@ void display_task(void *pv)
 
 void mqtt_task(void *pv)
 {
-    char payload[100];
-    float temp_local;
-    float hum_local;
-    const char *status_caixa;
-    const char *status_colisao;
+    char payload[256]; // Aumentei um pouco o buffer
+    
+    // Variáveis locais
+    stored_data_t dados_atuais;
+    stored_data_t dados_pendentes;
 
     while (1)
     {
-        if (mqtt_is_connected())
+        // 1. Coleta os dados atuais (fazemos isso independente da conexão)
+        if (xSemaphoreTake(xSensorMutex, pdMS_TO_TICKS(100)) == pdTRUE)
         {
-            // Entra na Seção Crítica para ler os dados dos sensores
-            if (xSemaphoreTake(xSensorMutex, pdMS_TO_TICKS(100)) == pdTRUE)
-            {
-                // Copia os dados para variáveis locais para liberar o mutex rapidamente
-                temp_local = sensor_data.temperatura;
-                hum_local = sensor_data.umidade;
-                status_caixa = sensor_data.caixa_aberta ? "aberta" : "fechada";
-                status_colisao = sensor_data.colisao ? "SIM" : "nao";
+            dados_atuais.temperatura = sensor_data.temperatura;
+            dados_atuais.umidade = sensor_data.umidade;
+            dados_atuais.caixa_aberta = sensor_data.caixa_aberta;
+            dados_atuais.colisao = sensor_data.colisao;
+            // dados_atuais.timestamp = to_ms_since_boot(get_absolute_time()); // Exemplo de timestamp simples
+            dados_atuais.timestamp = xTaskGetTickCount(); // Timestamp relativo (ticks do RTOS)
+            
+            xSemaphoreGive(xSensorMutex);
+        }
 
-                xSemaphoreGive(xSensorMutex);
+        bool online = mqtt_is_connected();
 
-                // Formata os dados em uma string JSON
-                sprintf(payload, "{\"temperatura\": %.1f, \"umidade\": %.1f, \"caixa\": \"%s\", \"colisao\": \"%s\"}", temp_local, hum_local, status_caixa, status_colisao);
+        if (online)
+        {
+            // --- MODO ONLINE: Esvazia a fila depois envia o atual ---
 
-                // Publica os dados no tópico MQTT. Você pode alterar "pico/dados".
-                mqtt_publish_async("pico/dados", payload);
+            // 1. Verifica se tem dados antigos na Flash
+            while (storage_has_data()) {
+                if (storage_get_next(&dados_pendentes)) {
+                    printf("Enviando dado historico da Flash...\n");
+                    
+                    sprintf(payload, "{\"temperatura\": %.1f, \"umidade\": %.1f, \"caixa\": \"%s\", \"colisao\": \"%s\", \"ts\": %u, \"offline\": true}", 
+                            dados_pendentes.temperatura, 
+                            dados_pendentes.umidade, 
+                            dados_pendentes.caixa_aberta ? "aberta" : "fechada", 
+                            dados_pendentes.colisao ? "SIM" : "nao",
+                            dados_pendentes.timestamp);
+
+                    // Publica síncrono ou com delay para não saturar
+                    mqtt_publish_async("pico/dados", payload); 
+                    
+                    // Confirma envio (Ack) para avançar fila e possivelmente limpar Flash
+                    storage_ack(); 
+                    
+                    vTaskDelay(pdMS_TO_TICKS(500)); // Pequeno delay entre envios em massa
+                } else {
+                    break;
+                }
             }
+
+            // 2. Envia o dado atual (Live)
+            sprintf(payload, "{\"temperatura\": %.1f, \"umidade\": %.1f, \"caixa\": \"%s\", \"colisao\": \"%s\", \"ts\": %u, \"offline\": false}", 
+                    dados_atuais.temperatura, 
+                    dados_atuais.umidade, 
+                    dados_atuais.caixa_aberta ? "aberta" : "fechada", 
+                    dados_atuais.colisao ? "SIM" : "nao",
+                    dados_atuais.timestamp);
+
+            mqtt_publish_async("pico/dados", payload);
+            printf("Dado Online enviado.\n");
         }
         else
         {
-            // Tenta reconectar se não estiver conectado
-            printf("Tentando reconectar ao MQTT...\n");
+            // --- MODO OFFLINE: Salva na Flash ---
+            printf("MQTT Offline. Salvando na Flash...\n");
+            
+            if (storage_save(&dados_atuais)) {
+                printf("Dado salvo no indice seguro.\n");
+            } else {
+                printf("ERRO: Flash cheia! Dado perdido.\n");
+                // Aqui você poderia decidir apagar tudo para recomeçar (circular)
+                // ou simplesmente descartar o novo.
+            }
         }
-        vTaskDelay(pdMS_TO_TICKS(10000)); // Publica a cada 10 segundos
+
+        vTaskDelay(pdMS_TO_TICKS(10000)); // Ciclo de 10 segundos
     }
 }
 
